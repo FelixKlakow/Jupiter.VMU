@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 namespace Jupiter.VMU
 {
     /// <summary>
-    /// Provides extension methods to subscribe to 
+    /// Provides extension methods to subscribe to <see cref="INotifyPropertyChanged.PropertyChanged"/>.
     /// </summary>
     public static class PropertyChangedHelperExtensions
     {
