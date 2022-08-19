@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32804.467
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jupiter.VMU", "Jupiter.VMU\Jupiter.VMU.csproj", "{33A86DD6-7EB9-4DF7-A381-47473FA9801B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Testing", "Testing\Testing.csproj", "{8136646A-9AA0-462D-A719-A2B9F9BA5138}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{33A86DD6-7EB9-4DF7-A381-47473FA9801B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{33A86DD6-7EB9-4DF7-A381-47473FA9801B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{33A86DD6-7EB9-4DF7-A381-47473FA9801B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{33A86DD6-7EB9-4DF7-A381-47473FA9801B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8136646A-9AA0-462D-A719-A2B9F9BA5138}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8136646A-9AA0-462D-A719-A2B9F9BA5138}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8136646A-9AA0-462D-A719-A2B9F9BA5138}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8136646A-9AA0-462D-A719-A2B9F9BA5138}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {776023CE-DCED-4BE0-B4F7-272D980AA033}
+	EndGlobalSection
+EndGlobal
