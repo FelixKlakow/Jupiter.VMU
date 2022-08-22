@@ -23,6 +23,13 @@
             #endregion
             #region #### PUBLIC #############################################################
             /// <inheritdoc/>
+            public override bool IsTargetOrCollected(object target)
+            {
+                return !_TargetObject.TryGetTarget(out TThis listenerTarget) 
+                    || target == listenerTarget;
+            }
+
+            /// <inheritdoc/>
             public override void OnPropertyChanged(T source, IList<Listener> listeners)
             {
                 if (_TargetObject.TryGetTarget(out TThis targetObject))
@@ -51,6 +58,9 @@
             }
             #endregion
             #region #### PUBLIC #############################################################
+            /// <inheritdoc/>
+            public override bool IsTargetOrCollected(object target) => false;
+
             /// <inheritdoc/>
             public override void OnPropertyChanged(T source, IList<Listener> listeners)
             {

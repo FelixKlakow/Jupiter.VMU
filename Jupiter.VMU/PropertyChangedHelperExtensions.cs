@@ -4,7 +4,7 @@ using System.Linq.Expressions;
 namespace Jupiter.VMU
 {
     /// <summary>
-    /// Provides extension methods to subscribe to 
+    /// Provides extension methods to subscribe to <see cref="INotifyPropertyChanged.PropertyChanged"/>.
     /// </summary>
     public static class PropertyChangedHelperExtensions
     {
@@ -56,6 +56,18 @@ namespace Jupiter.VMU
         }
 
         /// <summary>
+        /// Gets the <see cref="PropertyChangedHelper{T}"/> for the specified instance if any helper exists.
+        /// </summary>
+        /// <param name="source">The source to listen to.</param>
+        /// <param name="helper">The helper if any could be found.</param>
+        /// <returns>A boolean indicating whether a helper was found; otherwise false.</returns>
+        public static bool TryGetHelper<T>(this T source, out PropertyChangedHelper<T> helper)
+            where T : class, INotifyPropertyChanged
+        {
+            return PropertyChangedHelper<T>.TryGetHelper(source, out helper);
+        }
+
+        /// <summary>
         /// Unsubscribes from listening to the <see cref="INotifyPropertyChanged.PropertyChanged"/> event
         /// and clears all listeners and removes the instance from the cache.
         /// </summary>
@@ -63,7 +75,24 @@ namespace Jupiter.VMU
         public static void Unsubscribe<T>(this T source)
             where T : class, INotifyPropertyChanged
         {
-            source.GetHelper().Unsubscribe();
+            if (source.TryGetHelper(out PropertyChangedHelper<T> helper))
+            {
+                helper.Unsubscribe();
+            }
+        }
+
+        /// <summary>
+        /// Unsubscribes from listening to any update for the <paramref name="target"/> object.
+        /// </summary>
+        /// <param name="source">The source for which the <paramref name="target"/> should unsubscribe.</param>
+        /// <param name="target">The target for which the subscriptions should be removed.</param>
+        public static void UnsubscribeFor<T>(this T source, object target)
+            where T : class, INotifyPropertyChanged
+        {
+            if (source.TryGetHelper(out PropertyChangedHelper<T> helper))
+            {
+                helper.UnsubscribeFor(target);
+            }
         }
     }
 }

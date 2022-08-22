@@ -40,12 +40,43 @@ namespace Jupiter.VMU
         /// </summary>
         public void Unsubscribe()
         {
-            
             if (_Source.TryGetTarget(out T target) &&
                 CachedHelpers.Remove(target))
             {
                 target.PropertyChanged -= Target_PropertyChanged;
                 _PropertyChangedListeners.Clear();
+            }
+        }
+
+        /// <summary>
+        /// Unsubscribes from listening to any update for the <paramref name="target"/> object.
+        /// </summary>
+        /// <param name="source">The source for which the <paramref name="target"/> should unsubscribe.</param>
+        /// <param name="target">The target for which the subscriptions should be removed.</param>
+        public void UnsubscribeFor(object target)
+        {
+            foreach (var listeners in _PropertyChangedListeners.Values)
+            {
+                Listener[] list;
+                // Copy listeners to prevent any deadlocks
+                lock (listeners) list = listeners.ToArray();
+
+                List<Listener> listenersToRemove = new List<Listener>();
+                foreach (var item in list)
+                {
+                    if (item.IsTargetOrCollected(target))
+                    {
+                        listenersToRemove.Add(item);
+                    }
+                }
+
+                lock (listeners)
+                {
+                    foreach (var item in listenersToRemove)
+                    {
+                        listeners.Remove(item);
+                    }
+                }
             }
         }
 
@@ -88,7 +119,7 @@ namespace Jupiter.VMU
                     Type targetType = action.Target.GetType();
                     if (targetType.IsValueType)
                     {
-                        throw new NotSupportedException("Structs are currently not supported");
+                        throw new NotSupportedException("Structs are not supported");
                     }
                     else
                     {
@@ -116,6 +147,17 @@ namespace Jupiter.VMU
             {
                 return CachedHelpers.GetValue(source, k => new PropertyChangedHelper<T>(k));
             }
+        }
+
+        /// <summary>
+        /// Gets the <see cref="PropertyChangedHelper{T}"/> for the specified instance if any helper exists.
+        /// </summary>
+        /// <param name="source">The source to listen to.</param>
+        /// <param name="helper">The helper if any could be found.</param>
+        /// <returns>A boolean indicating whether a helper was found; otherwise false.</returns>
+        public static bool TryGetHelper(T source, out PropertyChangedHelper<T> helper)
+        {
+            return CachedHelpers.TryGetValue(source, out helper);
         }
         #endregion
         #region #### PRIVATE ############################################################
@@ -200,6 +242,13 @@ namespace Jupiter.VMU
         /// </summary>
         abstract class Listener
         {
+            /// <summary>
+            /// Checks whether the target of the listener is collected or matches <paramref name="target"/>.
+            /// </summary>
+            /// <param name="target">The target to check.</param>
+            /// <returns>True when the target is </returns>
+            public abstract bool IsTargetOrCollected(object target);
+
             /// <summary>
             /// Called when the target property has been changed.
             /// </summary>
