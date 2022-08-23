@@ -1,5 +1,6 @@
 ﻿// See https://aka.ms/new-console-template for more information
 using Jupiter.VMU;
+using System.Linq.Expressions;
 using Testing;
 
 void TestAndForget(SourceClass s)
@@ -8,6 +9,13 @@ void TestAndForget(SourceClass s)
     s.ValueToSet = true;
     s.ValueToSet = false;
     listener = null;
+}
+
+void TestCollection()
+{
+    SourceClass? f = new();
+    f.SubscribeUnsafe(p => p.ValueToSet, v => Console.WriteLine("Test"));
+    f = null;
 }
 
 Console.WriteLine("Hello, World!");
@@ -23,5 +31,9 @@ GC.Collect();
 s.ValueToSet = true;
 s.ValueToSet = false;
 
-Console.ReadKey();
+TestCollection();
 
+GC.Collect();
+s.SubscribeUnsafe(p => p.ValueToSet, v => Console.WriteLine(""));
+
+Console.ReadKey();

@@ -91,7 +91,7 @@ namespace Jupiter.VMU
         {
             if (source.TryGetHelper(out PropertyChangedHelper<T> helper))
             {
-                helper.UnsubscribeFor(target);
+                helper.Unsubscribe(target);
             }
         }
     }

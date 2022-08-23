@@ -1,49 +1,71 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
-using System.Linq.Expressions;
-using System.Reflection;
+using System.Linq;
+using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
+using System.Text;
+using System.Threading.Tasks;
+using System.Xml.Linq;
+using static System.Collections.Specialized.BitVector32;
 
 namespace Jupiter.VMU
 {
     /// <summary>
-    /// Provides helper methods for subscription to the <see cref="INotifyPropertyChanged.PropertyChanged"/> event.
+    /// Provides a way to subscribe to the <see cref="INotifyPropertyChanged.PropertyChanged"/> event.
     /// </summary>
-    /// <typeparam name="T">The type which raises the event.</typeparam>
-    /// <remarks>If <typeparamref name="T"/> does not provide a weak implementation of <see cref="INotifyPropertyChanged.PropertyChanged"/>, <see cref="Unsubscribe"/> must be called when the object is not longer in use.</remarks>
-    public sealed partial class PropertyChangedHelper<T>
-        where T : class, INotifyPropertyChanged
+    internal sealed class PropertyChangedHelper
     {
         #region #### VARIABLES ##########################################################
-        static readonly ConditionalWeakTable<T, PropertyChangedHelper<T>> CachedHelpers = new ConditionalWeakTable<T, PropertyChangedHelper<T>>();
-        static readonly Type ListenerType = typeof(Listener<,>);
+        static readonly ConditionalWeakTable<INotifyPropertyChanged, PropertyChangedHelper> CachedHelpers = new ConditionalWeakTable<INotifyPropertyChanged, PropertyChangedHelper>();
 
-        readonly WeakReference<T> _Source;
         readonly ConcurrentDictionary<string, IList<Listener>> _PropertyChangedListeners = new ConcurrentDictionary<string, IList<Listener>>();
+        readonly INotifyPropertyChanged _Source;
         #endregion
         #region #### CTOR ###############################################################
-        /// <summary>
-        /// Initalizes a new instance of the <see cref="PropertyChangedHelper{T}"/> class.
-        /// </summary>
-        /// <param name="source">The source to listen to.</param>
-        private PropertyChangedHelper(T source)
+        private PropertyChangedHelper(INotifyPropertyChanged source)
         {
+            _Source = source;
             source.PropertyChanged += Target_PropertyChanged;
-            _Source = new WeakReference<T>(source);
         }
         #endregion
         #region #### PUBLIC #############################################################
+        /// <summary>
+        /// Gets the <see cref="PropertyChangedHelper"/> for the specified instance.
+        /// </summary>
+        /// <param name="source">The source to listen to.</param>
+        /// <returns>The <see cref="PropertyChangedHelper"/> which has been generated.</returns>
+        public static PropertyChangedHelper GetHelper(INotifyPropertyChanged source)
+        {
+            /* lock cached helpers as ConditionalWeakTable possible can create values
+             * even if the value isn't later used anymore */
+            lock (CachedHelpers)
+            {
+                return CachedHelpers.GetValue(source, k => new PropertyChangedHelper(k));
+            }
+        }
+
+        /// <summary>
+        /// Gets the <see cref="PropertyChangedHelper{T}"/> for the specified instance if any helper exists.
+        /// </summary>
+        /// <param name="source">The source to listen to.</param>
+        /// <param name="helper">The helper if any could be found.</param>
+        /// <returns>A boolean indicating whether a helper was found; otherwise false.</returns>
+        public static bool TryGetHelper(INotifyPropertyChanged source, out PropertyChangedHelper helper)
+        {
+            return CachedHelpers.TryGetValue(source, out helper);
+        }
+
         /// <summary>
         /// Unsubscribes from listening to the <see cref="INotifyPropertyChanged.PropertyChanged"/> event
         /// and clears all listeners and removes the instance from the cache.
         /// </summary>
         public void Unsubscribe()
         {
-            if (_Source.TryGetTarget(out T target) &&
-                CachedHelpers.Remove(target))
+            if (CachedHelpers.Remove(_Source))
             {
-                target.PropertyChanged -= Target_PropertyChanged;
+                _Source.PropertyChanged -= Target_PropertyChanged;
                 _PropertyChangedListeners.Clear();
             }
         }
@@ -53,7 +75,7 @@ namespace Jupiter.VMU
         /// </summary>
         /// <param name="source">The source for which the <paramref name="target"/> should unsubscribe.</param>
         /// <param name="target">The target for which the subscriptions should be removed.</param>
-        public void UnsubscribeFor(object target)
+        public void Unsubscribe(object target)
         {
             foreach (var listeners in _PropertyChangedListeners.Values)
             {
@@ -81,131 +103,25 @@ namespace Jupiter.VMU
         }
 
         /// <summary>
-        /// Subscribes to a property update event.
+        /// Adds a listener for the specified property.
         /// </summary>
-        /// <typeparam name="R">The type of the property return value.</typeparam>
-        /// <param name="propertyAccessor">The property accessor.</param>
-        /// <param name="action">The action to execute </param>
-        /// <returns>The <see cref="PropertyChangedHelper{T}"/> for further subscriptions.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when the getter is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when the expression isn't a member expression.</exception>
-        /// <exception cref="NotSupportedException">Thrown when a anonymous type is the target of the <paramref name="action"/>.</exception>
-        public PropertyChangedHelper<T> Subscribe<R>(Expression<Func<T, R>> propertyAccessor, Action<R> action)
+        /// <param name="propertyName">The name of the property to listen to.</param>
+        /// <param name="listener">The listener to add.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="listener"/> or <paramref name="propertyName"/> is null.</exception>
+        public void AddListener(String propertyName, Listener listener)
         {
-            ValidateDelegate(action);
-            return SubscribeUnsafe(propertyAccessor, action);
-        }
+            if (propertyName == null) throw new ArgumentNullException(nameof(propertyName));
+            if (listener == null) throw new ArgumentNullException(nameof(listener));
 
-        /// <summary>
-        /// Subscribes to a property update event.
-        /// </summary>
-        /// <typeparam name="R">The type of the property return value.</typeparam>
-        /// <param name="propertyAccessor">The property accessor.</param>
-        /// <param name="action">The action to execute </param>
-        /// <returns>The <see cref="PropertyChangedHelper{T}"/> for further subscriptions.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when the getter is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when the expression isn't a member expression.</exception>
-        /// <remarks>Allows anonymous types as delegate targets for <paramref name="action"/>.</remarks>
-        public PropertyChangedHelper<T> SubscribeUnsafe<R>(Expression<Func<T, R>> propertyAccessor, Action<R> action)
-        {
-            String name = ValidateProperty(propertyAccessor);
-            IList<Listener> listeners = _PropertyChangedListeners.GetOrAdd(name, p => new List<Listener>());
+            IList<Listener> listeners = _PropertyChangedListeners.GetOrAdd(propertyName, p => new List<Listener>());
+
             lock (listeners)
             {
-                if (action.Target == null)
-                    listeners.Add(new ListenerStatic<R>(propertyAccessor.Compile(), action));
-                else
-                {
-                    Type targetType = action.Target.GetType();
-                    if (targetType.IsValueType)
-                    {
-                        throw new NotSupportedException("Structs are not supported");
-                    }
-                    else
-                    {
-                        listeners.Add((Listener)Activator.CreateInstance(
-                            ListenerType.MakeGenericType(typeof(T), targetType, typeof(R)),
-                            propertyAccessor.Compile(), action));
-                    }
-                    
-                }
+                listeners.Add(listener);
             }
-
-            return this;
-        }
-
-        /// <summary>
-        /// Gets the <see cref="PropertyChangedHelper{T}"/> for the specified instance.
-        /// </summary>
-        /// <param name="source">The source to listen to.</param>
-        /// <returns>The <see cref="PropertyChangedHelper{T}"/> which has been generated.</returns>
-        public static PropertyChangedHelper<T> GetHelper(T source)
-        {
-            /* lock cached helpers as ConditionalWeakTable possible can create values
-             * even if the value isn't later used anymore */
-            lock (CachedHelpers)
-            {
-                return CachedHelpers.GetValue(source, k => new PropertyChangedHelper<T>(k));
-            }
-        }
-
-        /// <summary>
-        /// Gets the <see cref="PropertyChangedHelper{T}"/> for the specified instance if any helper exists.
-        /// </summary>
-        /// <param name="source">The source to listen to.</param>
-        /// <param name="helper">The helper if any could be found.</param>
-        /// <returns>A boolean indicating whether a helper was found; otherwise false.</returns>
-        public static bool TryGetHelper(T source, out PropertyChangedHelper<T> helper)
-        {
-            return CachedHelpers.TryGetValue(source, out helper);
         }
         #endregion
         #region #### PRIVATE ############################################################
-        /// <summary>
-        /// Validates the property and gets the name.
-        /// </summary>
-        /// <typeparam name="R">The return type of the property.</typeparam>
-        /// <param name="getter">The getter to validate.</param>
-        /// <returns>The name of the property.</returns>
-        /// <exception cref="ArgumentNullException">Thrown when the getter is null.</exception>
-        /// <exception cref="ArgumentException">Thrown when the expression isn't a member expression.</exception>
-        [StackTraceHidden]
-        [DebuggerHidden]
-        private string ValidateProperty<R>(Expression<Func<T, R>> getter)
-        {
-            // Validate getter expression 
-            if (getter == null) throw new ArgumentNullException(nameof(getter));
-            if (!(getter.Body is MemberExpression)) throw new ArgumentException(nameof(getter) + "." + nameof(getter.Body) + " is not a valid MemberExpression");
-
-            // Cast body as member expression
-            MemberExpression expression = (MemberExpression)getter.Body;
-            // Validate member, must be a property
-            if (!(expression.Member is PropertyInfo)) throw new ArgumentException("Expression must access a property");
-
-            // Return the member name
-            return expression.Member.Name;
-        }
-
-        /// <summary>
-        /// Ensures that the type of the delegate isn't an anonymous.
-        /// </summary>
-        /// <param name="delegate">The delegate to check.</param>
-        [StackTraceHidden]
-        [DebuggerHidden]
-        void ValidateDelegate(Delegate @delegate)
-        {
-            if (@delegate.Target is Object target)
-            {
-                Type type = target.GetType();
-                if ((type.GetTypeInfo().Attributes & TypeAttributes.NotPublic) == TypeAttributes.NotPublic
-                   && (type.Name.StartsWith("<>", StringComparison.OrdinalIgnoreCase) || type.Name.StartsWith("VB$", StringComparison.OrdinalIgnoreCase))
-                   && type.GetTypeInfo().GetCustomAttributes(typeof(CompilerGeneratedAttribute)).Any())
-                {
-                    throw new NotSupportedException("Anonymous types can cause memory leaks.");
-                }
-            }
-        }
-
         /// <summary>
         /// Handles when <see cref="INotifyPropertyChanged.PropertyChanged"/> has been raised.
         /// </summary>
@@ -213,8 +129,7 @@ namespace Jupiter.VMU
         /// <param name="e">The event arguments.</param>
         void Target_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
-            if (_PropertyChangedListeners.TryGetValue(e.PropertyName, out var listeners) &&
-                _Source.TryGetTarget(out T target))
+            if (_PropertyChangedListeners.TryGetValue(e.PropertyName, out var listeners))
             {
                 Listener[] list;
                 // Copy listeners to prevent any deadlocks
@@ -223,7 +138,7 @@ namespace Jupiter.VMU
                 List<Listener> deadListeners = new List<Listener>();
                 foreach (var item in list)
                 {
-                    item.OnPropertyChanged(target, deadListeners);
+                    item.OnPropertyChanged(_Source, deadListeners);
                 }
 
                 lock (listeners)
@@ -240,7 +155,7 @@ namespace Jupiter.VMU
         /// <summary>
         /// Defines a listener to a property changed event.
         /// </summary>
-        abstract class Listener
+        public abstract class Listener
         {
             /// <summary>
             /// Checks whether the target of the listener is collected or matches <paramref name="target"/>.
@@ -254,9 +169,8 @@ namespace Jupiter.VMU
             /// </summary>
             /// <param name="source">The source object.</param>
             /// <param name="listeners">The list used to add listeners to which lost their reference.</param>
-            public abstract void OnPropertyChanged(T source, IList<Listener> listeners);
+            public abstract void OnPropertyChanged(object source, IList<Listener> listeners);
         }
         #endregion
-
     }
 }

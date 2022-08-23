@@ -30,7 +30,7 @@
             }
 
             /// <inheritdoc/>
-            public override void OnPropertyChanged(T source, IList<Listener> listeners)
+            public override void OnPropertyChangedCore(T source, IList<PropertyChangedHelper.Listener> listeners)
             {
                 if (_TargetObject.TryGetTarget(out TThis targetObject))
                 {
@@ -62,7 +62,7 @@
             public override bool IsTargetOrCollected(object target) => false;
 
             /// <inheritdoc/>
-            public override void OnPropertyChanged(T source, IList<Listener> listeners)
+            public override void OnPropertyChangedCore(T source, IList<PropertyChangedHelper.Listener> listeners)
             {
                 _Callback(_PropertyGetter(source));
             }
