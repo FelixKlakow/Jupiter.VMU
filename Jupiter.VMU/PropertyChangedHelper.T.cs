@@ -51,14 +51,15 @@ namespace Jupiter.VMU
         /// <typeparam name="R">The type of the property return value.</typeparam>
         /// <param name="propertyAccessor">The property accessor.</param>
         /// <param name="action">The action to execute </param>
+        /// <param name="initialUpdate">Determines if the subscriber should receive a update upon subscription.</param>
         /// <returns>The <see cref="PropertyChangedHelper{T}"/> for further subscriptions.</returns>
         /// <exception cref="ArgumentNullException">Thrown when the getter is null.</exception>
         /// <exception cref="ArgumentException">Thrown when the expression isn't a member expression.</exception>
         /// <exception cref="NotSupportedException">Thrown when a anonymous type is the target of the <paramref name="action"/>.</exception>
-        public PropertyChangedHelper<T> Subscribe<R>(Expression<Func<T, R>> propertyAccessor, Action<R> action)
+        public PropertyChangedHelper<T> Subscribe<R>(Expression<Func<T, R>> propertyAccessor, Action<R> action, Boolean initialUpdate = false)
         {
             ValidateDelegate(action);
-            return SubscribeUnsafe(propertyAccessor, action);
+            return SubscribeUnsafe(propertyAccessor, action, initialUpdate);
         }
 
         /// <summary>
@@ -67,11 +68,12 @@ namespace Jupiter.VMU
         /// <typeparam name="R">The type of the property return value.</typeparam>
         /// <param name="propertyAccessor">The property accessor.</param>
         /// <param name="action">The action to execute </param>
+        /// <param name="initialUpdate">Determines if the subscriber should receive a update upon subscription.</param>
         /// <returns>The <see cref="PropertyChangedHelper{T}"/> for further subscriptions.</returns>
         /// <exception cref="ArgumentNullException">Thrown when the getter is null.</exception>
         /// <exception cref="ArgumentException">Thrown when the expression isn't a member expression.</exception>
         /// <remarks>Allows anonymous types as delegate targets for <paramref name="action"/>.</remarks>
-        public PropertyChangedHelper<T> SubscribeUnsafe<R>(Expression<Func<T, R>> propertyAccessor, Action<R> action)
+        public PropertyChangedHelper<T> SubscribeUnsafe<R>(Expression<Func<T, R>> propertyAccessor, Action<R> action, Boolean initialUpdate = false)
         {
             String propertyName = ValidateProperty(propertyAccessor);
 
@@ -88,7 +90,8 @@ namespace Jupiter.VMU
                 {
                     _PropertyChangedHelper.AddListener(propertyName, (Listener)Activator.CreateInstance(
                         ListenerType.MakeGenericType(typeof(T), targetType, typeof(R)),
-                        propertyAccessor.Compile(), action));
+                        propertyAccessor.Compile(), action),
+                        initialUpdate);
                 }
 
             }

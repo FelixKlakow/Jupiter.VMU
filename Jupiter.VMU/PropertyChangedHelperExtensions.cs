@@ -15,15 +15,16 @@ namespace Jupiter.VMU
         /// <param name="source">The source for the <see cref="INotifyPropertyChanged.PropertyChanged"/> event.</param>
         /// <param name="propertyAccessor">The property accessor.</param>
         /// <param name="action">The action to execute </param>
+        /// <param name="initialUpdate">Determines if the subscriber should receive a update upon subscription.</param>
         /// <returns>The <see cref="PropertyChangedHelper{T}"/> for further subscriptions.</returns>
         /// <exception cref="ArgumentNullException">Thrown when the getter is null.</exception>
         /// <exception cref="ArgumentException">Thrown when the expression isn't a member expression.</exception>
         /// <exception cref="NotSupportedException">Thrown when a anonymous type is the target of the <paramref name="action"/>.</exception>
-        public static PropertyChangedHelper<T> Subscribe<T, R>(this T source, Expression<Func<T, R>> propertyAccessor, Action<R> action)
+        public static PropertyChangedHelper<T> Subscribe<T, R>(this T source, Expression<Func<T, R>> propertyAccessor, Action<R> action, Boolean initialUpdate = false)
             where T : class, INotifyPropertyChanged
         {
             return PropertyChangedHelper<T>.GetHelper(source)
-                .Subscribe(propertyAccessor, action);
+                .Subscribe(propertyAccessor, action, initialUpdate);
         }
 
         /// <summary>
@@ -33,15 +34,16 @@ namespace Jupiter.VMU
         /// <param name="source">The source for the <see cref="INotifyPropertyChanged.PropertyChanged"/> event.</param>
         /// <param name="propertyAccessor">The property accessor.</param>
         /// <param name="action">The action to execute </param>
+        /// <param name="initialUpdate">Determines if the subscriber should receive a update upon subscription.</param>
         /// <returns>The <see cref="PropertyChangedHelper{T}"/> for further subscriptions.</returns>
         /// <exception cref="ArgumentNullException">Thrown when the getter is null.</exception>
         /// <exception cref="ArgumentException">Thrown when the expression isn't a member expression.</exception>
         /// <remarks>Allows anonymous types as delegate targets for <paramref name="action"/>.</remarks>
-        public static PropertyChangedHelper<T> SubscribeUnsafe<T, R>(this T source, Expression<Func<T, R>> propertyAccessor, Action<R> action)
+        public static PropertyChangedHelper<T> SubscribeUnsafe<T, R>(this T source, Expression<Func<T, R>> propertyAccessor, Action<R> action, Boolean initialUpdate = false)
             where T : class, INotifyPropertyChanged
         {
             return PropertyChangedHelper<T>.GetHelper(source)
-                .SubscribeUnsafe(propertyAccessor, action);
+                .SubscribeUnsafe(propertyAccessor, action, initialUpdate);
         }
 
         /// <summary>
@@ -86,7 +88,7 @@ namespace Jupiter.VMU
         /// </summary>
         /// <param name="source">The source for which the <paramref name="target"/> should unsubscribe.</param>
         /// <param name="target">The target for which the subscriptions should be removed.</param>
-        public static void UnsubscribeFor<T>(this T source, object target)
+        public static void Unsubscribe<T>(this T source, object target)
             where T : class, INotifyPropertyChanged
         {
             if (source.TryGetHelper(out PropertyChangedHelper<T> helper))

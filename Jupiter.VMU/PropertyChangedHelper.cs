@@ -73,7 +73,6 @@ namespace Jupiter.VMU
         /// <summary>
         /// Unsubscribes from listening to any update for the <paramref name="target"/> object.
         /// </summary>
-        /// <param name="source">The source for which the <paramref name="target"/> should unsubscribe.</param>
         /// <param name="target">The target for which the subscriptions should be removed.</param>
         public void Unsubscribe(object target)
         {
@@ -107,8 +106,9 @@ namespace Jupiter.VMU
         /// </summary>
         /// <param name="propertyName">The name of the property to listen to.</param>
         /// <param name="listener">The listener to add.</param>
+        /// <param name="initialUpdate">Determines if the subscriber should receive a update upon subscription.</param>
         /// <exception cref="ArgumentNullException">Thrown when <paramref name="listener"/> or <paramref name="propertyName"/> is null.</exception>
-        public void AddListener(String propertyName, Listener listener)
+        public void AddListener(String propertyName, Listener listener, Boolean initialUpdate = false)
         {
             if (propertyName == null) throw new ArgumentNullException(nameof(propertyName));
             if (listener == null) throw new ArgumentNullException(nameof(listener));
@@ -118,6 +118,11 @@ namespace Jupiter.VMU
             lock (listeners)
             {
                 listeners.Add(listener);
+            }
+
+            if (initialUpdate)
+            {
+                listener.OnPropertyChanged(_Source, new List<Listener>());
             }
         }
         #endregion
