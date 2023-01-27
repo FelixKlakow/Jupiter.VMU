@@ -2,13 +2,9 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using static System.Collections.Specialized.BitVector32;
 
 namespace Jupiter.VMU
 {
@@ -52,7 +48,7 @@ namespace Jupiter.VMU
         /// <param name="source">The source to listen to.</param>
         /// <param name="helper">The helper if any could be found.</param>
         /// <returns>A boolean indicating whether a helper was found; otherwise false.</returns>
-        public static bool TryGetHelper(INotifyPropertyChanged source, out PropertyChangedHelper helper)
+        public static bool TryGetHelper(INotifyPropertyChanged source, [MaybeNullWhen(false)] out PropertyChangedHelper? helper)
         {
             return CachedHelpers.TryGetValue(source, out helper);
         }
@@ -132,9 +128,9 @@ namespace Jupiter.VMU
         /// </summary>
         /// <param name="sender">The sender of the event.</param>
         /// <param name="e">The event arguments.</param>
-        void Target_PropertyChanged(object sender, PropertyChangedEventArgs e)
+        void Target_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (_PropertyChangedListeners.TryGetValue(e.PropertyName, out var listeners))
+            if (e.PropertyName != null && _PropertyChangedListeners.TryGetValue(e.PropertyName, out var listeners))
             {
                 Listener[] list;
                 // Copy listeners to prevent any deadlocks

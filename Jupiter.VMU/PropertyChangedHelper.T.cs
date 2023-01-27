@@ -1,10 +1,12 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using static Jupiter.VMU.PropertyChangedHelper;
 
 namespace Jupiter.VMU
 {
@@ -90,7 +92,7 @@ namespace Jupiter.VMU
                 {
                     _PropertyChangedHelper.AddListener(propertyName, (Listener)Activator.CreateInstance(
                         ListenerType.MakeGenericType(typeof(T), targetType, typeof(R)),
-                        propertyAccessor.Compile(), action),
+                        propertyAccessor.Compile(), action)!,
                         initialUpdate);
                 }
 
@@ -115,11 +117,11 @@ namespace Jupiter.VMU
         /// <param name="source">The source to listen to.</param>
         /// <param name="helper">The helper if any could be found.</param>
         /// <returns>A boolean indicating whether a helper was found; otherwise false.</returns>
-        public static bool TryGetHelper(T source, out PropertyChangedHelper<T> helper)
+        public static bool TryGetHelper(T source, [MaybeNullWhen(false)] out PropertyChangedHelper<T>? helper)
         {
-            if (PropertyChangedHelper.TryGetHelper(source, out PropertyChangedHelper propertyChangedHelper))
+            if (PropertyChangedHelper.TryGetHelper(source, out PropertyChangedHelper? propertyChangedHelper))
             {
-                helper = new PropertyChangedHelper<T>(propertyChangedHelper);
+                helper = new PropertyChangedHelper<T>(propertyChangedHelper!);
                 return true;
             }
 

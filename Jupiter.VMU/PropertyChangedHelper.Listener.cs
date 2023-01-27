@@ -1,4 +1,7 @@
-﻿namespace Jupiter.VMU
+﻿using System;
+using System.Collections.Generic;
+
+namespace Jupiter.VMU
 {
     public sealed partial class PropertyChangedHelper<T>
     {
@@ -18,21 +21,21 @@
             {
                 _PropertyGetter = func;
                 _Callback = (Action<TThis, R>)Delegate.CreateDelegate(CallbackType, null, action.Method);
-                _TargetObject = new WeakReference<TThis>((TThis)action.Target);
+                _TargetObject = new WeakReference<TThis>((TThis)action.Target!);
             }
             #endregion
             #region #### PUBLIC #############################################################
             /// <inheritdoc/>
             public override bool IsTargetOrCollected(object target)
             {
-                return !_TargetObject.TryGetTarget(out TThis listenerTarget) 
+                return !_TargetObject.TryGetTarget(out TThis? listenerTarget) 
                     || target == listenerTarget;
             }
 
             /// <inheritdoc/>
             public override void OnPropertyChangedCore(T source, IList<PropertyChangedHelper.Listener> listeners)
             {
-                if (_TargetObject.TryGetTarget(out TThis targetObject))
+                if (_TargetObject.TryGetTarget(out TThis? targetObject))
                 {
                     _Callback(targetObject, _PropertyGetter(source));
                 }

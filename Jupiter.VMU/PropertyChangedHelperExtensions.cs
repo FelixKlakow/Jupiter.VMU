@@ -1,4 +1,6 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq.Expressions;
 
 namespace Jupiter.VMU
@@ -63,7 +65,7 @@ namespace Jupiter.VMU
         /// <param name="source">The source to listen to.</param>
         /// <param name="helper">The helper if any could be found.</param>
         /// <returns>A boolean indicating whether a helper was found; otherwise false.</returns>
-        public static bool TryGetHelper<T>(this T source, out PropertyChangedHelper<T> helper)
+        public static bool TryGetHelper<T>(this T source, [MaybeNullWhen(false)] out PropertyChangedHelper<T> helper)
             where T : class, INotifyPropertyChanged
         {
             return PropertyChangedHelper<T>.TryGetHelper(source, out helper);
@@ -77,7 +79,7 @@ namespace Jupiter.VMU
         public static void Unsubscribe<T>(this T source)
             where T : class, INotifyPropertyChanged
         {
-            if (source.TryGetHelper(out PropertyChangedHelper<T> helper))
+            if (source.TryGetHelper(out PropertyChangedHelper<T>? helper))
             {
                 helper.Unsubscribe();
             }
@@ -91,7 +93,7 @@ namespace Jupiter.VMU
         public static void Unsubscribe<T>(this T source, object target)
             where T : class, INotifyPropertyChanged
         {
-            if (source.TryGetHelper(out PropertyChangedHelper<T> helper))
+            if (source.TryGetHelper(out PropertyChangedHelper<T>? helper))
             {
                 helper.Unsubscribe(target);
             }
